@@ -1,0 +1,11 @@
+services:
+  redis:
+    image: "redis:alpine"
+    container_name: devconnect_2023_redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
+volumes:
+  redis_data:
