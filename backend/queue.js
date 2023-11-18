@@ -20,9 +20,6 @@ proofsQueue.process(async (job, done) => {
       tx: voteTx.hash,
     }
 
-    // const balance = (await providerL1.getBalance(data.voter)).toString();
-    // const result = { balance: ethers.formatUnits(balance)}
-
     done(null, result);
   } catch (e) {
     console.error(e);
@@ -43,7 +40,8 @@ async function generateProof(chainId, proposalId, stateRoot, block, token, voter
 }
 
 async function castVote(chainId, proposalId, voter, support, weight, proof) {
-  const GovernorL1 = new ethers.Contract('0x491A7D1A203980Fd5d2cdE093893FcdCf994291e', GovernorL1Meta.abi, signerL1);
+  const GOVERNOR_ADDRESS = '0x6c9373BaD4d213Ea0C796cCF039102B43341df24'
+  const GovernorL1 = new ethers.Contract(GOVERNOR_ADDRESS, GovernorL1Meta.abi, signerL1);
   const tx = await GovernorL1.castVoteCC(proposalId, voter, support, weight, chainId, proof)
   await tx.wait();
   return tx
