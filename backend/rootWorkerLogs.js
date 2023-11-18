@@ -59,12 +59,12 @@ const CONTRACT_L2 = new ethers.Contract(
 let client
 
 
-async function getLogs(fromBlock) {
+async function getLogs(fromBlock, toBlock) {
   // https://docs.alchemy.com/docs/deep-dive-into-eth_getlogs#what-are-event-signatures
   const logs = await PROVIDER_L2.getLogs(
     {
       "fromBlock": fromBlock,
-      "toBlock": "latest",
+      "toBlock": toBlock,
       "address": ERC20_L2,
       "topics": [
         "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
@@ -146,10 +146,16 @@ const main = async () => {
   let fromBlock = parseInt(process.env.FROM_BLOCK_NUMBER);
 
   while (condition) {
-    console.log(`BlockNumber: ${fromBlock}`)
+    const toBlock = (await PROVIDER_L2.getBlock()).number
+    console.log(`BlockNumber: ${fromBlock}/${toBlock}`)
 
-    let logs = await getLogs(fromBlock)
+    let logs = await getLogs(fromBlock, toBlock)
+    if (fromBlock >= toBlock) {
+      await sleep()
+      continue
+    }
     if (logs.length == 0) {
+      fromBlock = toBlock
       await sleep()
       continue
     }
