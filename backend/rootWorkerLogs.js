@@ -42,11 +42,18 @@ const PROVIDER_L2 = new ethers.JsonRpcProvider(cfgL2.providerUrl)
 
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, PROVIDER_L1)
 
-const STATE_ROOT_ADDRESS = "0xbb8c8E79c34C6420716A6937bF7E3B9226Cc81f5"
-const CONTRACT_L1 = new ethers.Contract(STATE_ROOT_ADDRESS, ABI_STATE_ROOT_L1, wallet)
+const CONTRACT_L1 = new ethers.Contract(
+  process.env.SEPOLIA_STATE_ROOT_ADDRESS,
+  ABI_STATE_ROOT_L1,
+  wallet
+)
 
-const ERC20_L2 = process.env.FXD_ADDRESS
-const CONTRACT_L2 = new ethers.Contract(ERC20_L2, ABI_ERC20, PROVIDER_L2)
+const ERC20_L2 = process.env.SEPOLIA_SCROLL_ERC20_ADDRESS
+const CONTRACT_L2 = new ethers.Contract(
+  ERC20_L2,
+  ABI_ERC20,
+  PROVIDER_L2
+)
 
 // Redis client
 let client
@@ -61,7 +68,7 @@ async function getLogs(fromBlock) {
       "address": ERC20_L2,
       "topics": [
         "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        // "0x0000000000000000000000000000000000000000000000000000000000000000",
       ]
     }
   )
@@ -112,11 +119,11 @@ async function storeTree(blockNumber, leafsData) {
 }
 
 async function checkTree(tree, leafsData) {
-    console.log("Check leaf: ", leafsData[1])
-    await proofElementInTree(tree, leafsData[1])
+    console.log("Check leaf: ", leafsData[0])
+    await proofElementInTree(tree, leafsData[0])
     // console.log("Proof2: ", await proofElementInTree(tree, ['0x22f6cc8738308a8c92a6a71ea67832463d1fec0d', 71983490000 ]))
     // console.log("Proof wrong: ", await proofElementInTree(tree, ['0x22f6cc8738308a8c92a6a71ea67832463d1fec0d', 123 ]))
-    console.log("Leaf is proved")
+    console.log("Leaf is ok")
 }
 
 async function sendNewRoot(root, blockNumber) {
