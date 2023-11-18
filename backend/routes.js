@@ -34,13 +34,13 @@ router.get('/jobs', async function(req, res, next) {
 });
 
 router.post('/jobs', async function(req, res, next) {
-  const { chainId, proposalId, token, voter, support } = req.body;
-  if ([chainId, proposalId, token, voter, support].some(i => i === undefined)) {
+  const { chainId, proposalId, stateRoot, token, voter, support, weight } = req.body;
+  if ([chainId, proposalId, stateRoot, token, voter, support, weight].some(i => i === undefined)) {
     res.status(400).json({error: 'Not every required parameters provided'}).end();
     return
   }
 
-  const jobData = { chainId, proposalId, token, voter, support }
+  const jobData = { chainId, proposalId, stateRoot, token, voter, support, weight }
   const job = await proofsQueue.add(jobData);
   res.status(200).json({job: job.id}).end();
 });
