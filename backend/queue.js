@@ -1,5 +1,9 @@
 const Queue = require('bull');
 const { ethers } = require("ethers");
+
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
+
 const { generateScrollProof } = require('./scroll')
 const GovernorL1Meta = require('../on-chain/artifacts/contracts/GovernorL1.sol/GovernorL1.json')
 
@@ -46,7 +50,7 @@ async function generateProof(chainId, stateRoot, block, token, voter) {
 }
 
 async function castVote(chainId, proposalId, voter, support, weight, proof) {
-  const GOVERNOR_ADDRESS = '0x507d16b08562Bc341775657C18eA2123EFc69FD1'
+  const GOVERNOR_ADDRESS = '0xD7A1DC78F0E90Ab2645E1DbECf6135D17c7dA411'
   const GovernorL1 = new ethers.Contract(GOVERNOR_ADDRESS, GovernorL1Meta.abi, signerL1);
   const tx = await GovernorL1.castVoteCC(proposalId, voter, support, weight, chainId, proof)
   await tx.wait();
