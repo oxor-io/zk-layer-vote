@@ -1,5 +1,11 @@
 const ethers = require("ethers");
-const { generateTree, proofElementInTree, selializeTree } = require("./generateMerkleTree");
+const {
+  generateTree,
+  proofElementInTree,
+  indexOfTree,
+  selializeTree,
+  deselializeTree,
+} = require("./generateMerkleTree");
 const { createClient } = require('redis');
 const ABI_ERC20 = require("./abi/Erc20.json");
 const { abi: ABI_STATE_ROOT_L1 } = require("./abi/StateRootL1.json");
@@ -99,9 +105,11 @@ async function storeBalances(logs) {
   }
 }
 
-async function getTreeLeafs() {
-  const storedBalances = await client.hGetAll(`chainId-${cfgL2.chainId}-balances`);
+async function fetchBalances(chainId) {
+  return await client.hGetAll(`chainId-${chainId}-balances`);
+}
 
+async function getTreeLeafs(storedBalances) {
   let leafsData = []
   for (const address in storedBalances) {
     const balance = storedBalances[address]
@@ -112,13 +120,16 @@ async function getTreeLeafs() {
   return leafsData
 }
 
-async function storeTree(blockNumber, leafsData) {
-  const tree = await generateTree(process.env.TREE_HEIGHT, leafsData)
+async function storeTree(tree, chainId, blockNumber) {
   const treeStr = await selializeTree(tree)
 
-  await client.hSet(`chainId-${cfgL2.chainId}-trees`, blockNumber.toString(), treeStr);
+  await client.hSet(`chainId-${chainId}-trees`, blockNumber.toString(), treeStr)
   console.log("Tree root: ", tree.root)
-  return tree
+}
+
+async function fetchTree(chainId, blockNumber) {
+  const treeStr = await client.hGet(`chainId-${chainId}-trees`, blockNumber.toString())
+  return deselializeTree(treeStr)
 }
 
 async function checkTree(tree, leafsData) {
@@ -137,6 +148,18 @@ async function sendNewRoot(root, blockNumber) {
 async function sleep() {
   console.log("Sleep...")
   await new Promise(r => setTimeout(r, process.env.TIMEOUT_INTERVAL))
+}
+
+async function getPath(chainId, address) {
+  const storedBalances = await fetchBalances(chainId)
+  const leafsData = await getTreeLeafs(storedBalances)
+  const tree = await generateTree(process.env.TREE_HEIGHT, leafsData)
+  console.log(`Address: ${address} Balance: ${storedBalances[address]}`)
+  const index = await indexOfTree(tree, [address, storedBalances[address]])
+  console.log(`Index: ${index}`)
+  const path = await tree.path(index)
+  console.log('Path:', path)
+  return path
 }
 
 const main = async () => {
@@ -167,11 +190,18 @@ const main = async () => {
     // console.log("Logs number will be processed: ", logs.length)
 
     await storeBalances(logs)
-
-    const leafsData = await getTreeLeafs()
-    const tree = await storeTree(fromBlock, leafsData)
+    const storedBalances = await fetchBalances(cfgL2.chainId)
+    const leafsData = await getTreeLeafs(storedBalances)
+    const tree = await generateTree(process.env.TREE_HEIGHT, leafsData)
+    await storeTree(tree, cfgL2.chainId, fromBlock)
 
     await checkTree(tree, leafsData)
+
+    // DEBUG
+    // await getPath(cfgL2.chainId, '0x9ca08a2eaba8ea3da0173f2f3b86bed0f0bbda2e')
+    // const storedTree = await fetchTree(cfgL2.chainId, fromBlock)
+    // console.log(storedTree)
+    // await checkTree(storedTree, leafsData)
 
     await sendNewRoot(tree.root, fromBlock)
 
