@@ -27,7 +27,21 @@ async function proofElementInTree(tree, val) {
   return tree.proof(poseidon.F.toObject(res))
 }
 
+async function selializeTree(tree) {
+  return JSON.stringify(tree.serialize(), (key, value) =>
+    typeof value === 'bigint'
+        ? value.toString()
+        : value // return everything else unchanged
+  )
+}
+
+async function deselializeTree(treeStr) {
+  return MerkleTree.deserialize(JSON.parse(treeStr))
+}
+
 module.exports = {
   generateTree,
   proofElementInTree,
+  selializeTree,
+  deselializeTree,
 };

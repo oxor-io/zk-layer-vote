@@ -1,5 +1,5 @@
 const ethers = require("ethers");
-const { generateTree, proofElementInTree } = require("./generateMerkleTree");
+const { generateTree, proofElementInTree, selializeTree } = require("./generateMerkleTree");
 const { createClient } = require('redis');
 const ABI_ERC20 = require("./abi/Erc20.json");
 const ABI_STATE_ROOT_L1 = require("./abi/StateRootL1.json");
@@ -10,12 +10,8 @@ require("dotenv").config();
 // XDC Apothem Network == 51
 const CHAIN_ID = 51
 
-const USDT_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7" // mainnet USDT Contract
-const FXD_ADDRESS = "0xDf29cB40Cb92a1b8E8337F542E3846E185DefF96" // XDC FXD Contract
-
 const TIMEOUT_INTERVAL = 10000
-// const FROM_BLOCK_NUMBER = 18597627 // mainnet USDT
-const FROM_BLOCK_NUMBER = 57005948 // XDC FXD
+const FROM_BLOCK_NUMBER = 57005948 // XDC (18597627 for mainnet)
 const TREE_HEIGHT = 20
 
 // providers
@@ -28,17 +24,16 @@ const PROVIDER_L2 = new ethers.JsonRpcProvider(
   `https://erpc.apothem.network`
 )
 
-const STATE_ROOT_ADDRESS = "0xbb8c8E79c34C6420716A6937bF7E3B9226Cc81f5"
+const USDT_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7" // mainnet USDT Contract
+const FXD_ADDRESS = "0xDf29cB40Cb92a1b8E8337F542E3846E185DefF96" // XDC FXD Contract
+// const STATE_ROOT_ADDRESS = "0xbb8c8E79c34C6420716A6937bF7E3B9226Cc81f5"
 // const CONTRACT_L1 = new ethers.Contract(STATE_ROOT_ADDRESS, ABI_STATE_ROOT_L1, PROVIDER_L1)
 
 const ERC20_L2 = FXD_ADDRESS
 const CONTRACT_L2 = new ethers.Contract(ERC20_L2, ABI_ERC20, PROVIDER_L2)
 
-
+// Redis client
 let client
-
-// address -> balance
-let db = {};
 
 
 async function getLogs(fromBlock) {
@@ -50,7 +45,7 @@ async function getLogs(fromBlock) {
       "address": ERC20_L2,
       "topics": [
         "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-        // "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
       ]
     }
   )
@@ -65,9 +60,9 @@ async function getAddressBalance(address) {
 }
 
 
-async function parseLogs(logs) {
+async function storeBalances(logs) {
   for (let i=0; i<logs.length; i++) {
-    const address = '0x' + logs[i].topics[1].slice(26)
+    const address = '0x' + logs[i].topics[2].slice(26)
 
     // @todo pass already added addresses
     // if (address in db) continue
@@ -93,15 +88,7 @@ async function getTreeLeafs() {
 
 async function storeTree(blockNumber, leafsData) {
   const tree = await generateTree(TREE_HEIGHT, leafsData)
-
-  const treeStr = JSON.stringify(tree.serialize(), (key, value) =>
-    typeof value === 'bigint'
-        ? value.toString()
-        : value // return everything else unchanged
-  )
-
-  // Deserialization
-  // MerkleTree.deserialize(JSON.parse(treeStr))
+  const treeStr = await selializeTree(tree)
 
   await client.hSet(`chainId-${CHAIN_ID}-trees`, blockNumber.toString(), treeStr);
   console.log("Tree root: ", tree.root)
@@ -121,6 +108,10 @@ async function sendNewRoot(root, blockNumber) {
   CONTRACT_L1.addStateRoot(CHAIN_ID, root, blockNumber)
 }
 
+async function sleep() {
+  await new Promise(r => setTimeout(r, TIMEOUT_INTERVAL))
+}
+
 const main = async () => {
   client = await createClient()
     .on('error', err => console.log('Redis Client Error', err))
@@ -137,7 +128,8 @@ const main = async () => {
     logs = logs.length > 5 ? logs.slice(0, 5) : logs
     console.log("Logs number will be processed: ", logs.length)
 
-    await parseLogs(logs)
+    await storeBalances(logs)
+
     const leafsData = await getTreeLeafs()
     const tree = await storeTree(fromBlock, leafsData)
 
@@ -146,7 +138,7 @@ const main = async () => {
     await sendNewRoot(tree.root, fromBlock)
     fromBlock = logs[logs.length-1].blockNumber + 1
 
-    await new Promise(r => setTimeout(r, TIMEOUT_INTERVAL))
+    await sleep()
 
     // @todo unlimit loop
     condition = false
