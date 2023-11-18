@@ -12,8 +12,8 @@ proofsQueue.process(async (job, done) => {
     const data = job.data
     console.log(`Processing Job #${job.id} with data ${JSON.stringify(data)}...`);
 
-    const { chainId, proposalId, stateRoot, token, voter, support, weight } = job.data;
-    const proof = await generateProof(chainId, proposalId, stateRoot, token, voter, support);
+    const { chainId, proposalId, stateRoot, block, token, voter, support, weight } = job.data;
+    const proof = await generateProof(chainId, proposalId, stateRoot, block, token, voter, support);
     const voteTx = await castVote(chainId, proposalId, voter, support, weight, proof);
     const result = {
       proof: proof,
@@ -34,7 +34,7 @@ proofsQueue.on('completed', (job, result) => {
   console.log(`Job #${job.id} completed with result ${JSON.stringify(result)}`);
 })
 
-async function generateProof(chainId, proposalId, stateRoot, token, voter, support) {
+async function generateProof(chainId, proposalId, stateRoot, block, token, voter, support) {
   // TODO
   const SLEEP_DELAY = 60 * 1000;
   await new Promise(resolve => setTimeout(resolve, SLEEP_DELAY));
