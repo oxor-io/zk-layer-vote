@@ -90,7 +90,7 @@ async function storeBalances(logs) {
     const address = '0x' + logs[i].topics[2].slice(26)
     const balance = await getAddressBalance(address)
 
-    if (address in storeBalances || storedBalances[address] == balance.toString()) {
+    if (address in storedBalances && storedBalances[address] == balance.toString()) {
       continue
     }
 
