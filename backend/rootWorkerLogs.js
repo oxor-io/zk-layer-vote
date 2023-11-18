@@ -130,7 +130,7 @@ async function checkTree(tree, leafsData) {
 }
 
 async function sendNewRoot(root, blockNumber) {
-  console.log("Send root and blockNumber: ", root, blockNumber)
+  console.log("Send chainId, root and blockNumber: ", cfgL2.chainId, root, blockNumber)
   CONTRACT_L1.addStateRoot(cfgL2.chainId, ethers.toBeHex(root), blockNumber)
 }
 
@@ -163,9 +163,8 @@ const main = async () => {
       continue
     }
 
-    // @todo process all logs
-    logs = logs.length > 5 ? logs.slice(0, 5) : logs
-    console.log("Logs number will be processed: ", logs.length)
+    // logs = logs.length > 5 ? logs.slice(0, 5) : logs
+    // console.log("Logs number will be processed: ", logs.length)
 
     await storeBalances(logs)
 
