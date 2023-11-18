@@ -1,5 +1,6 @@
 const Queue = require('bull');
 const { ethers } = require("ethers");
+const { generateScrollProof } = require('./scroll')
 const GovernorL1Meta = require('../on-chain/artifacts/contracts/GovernorL1.sol/GovernorL1.json')
 
 const providerL1 = new ethers.AlchemyProvider('sepolia', process.env.ALCHEMY_API_KEY);
@@ -13,7 +14,7 @@ proofsQueue.process(async (job, done) => {
     console.log(`Processing Job #${job.id} with data ${JSON.stringify(data)}...`);
 
     const { chainId, proposalId, stateRoot, block, token, voter, support, weight } = job.data;
-    const proof = await generateProof(chainId, proposalId, stateRoot, block, token, voter, support);
+    const proof = await generateProof(chainId, stateRoot, block, token, voter);
     const voteTx = await castVote(chainId, proposalId, voter, support, weight, proof);
     const result = {
       proof: proof,
@@ -31,7 +32,12 @@ proofsQueue.on('completed', (job, result) => {
   console.log(`Job #${job.id} completed with result ${JSON.stringify(result)}`);
 })
 
-async function generateProof(chainId, proposalId, stateRoot, block, token, voter, support) {
+async function generateProof(chainId, stateRoot, block, token, voter) {
+  if (chainId == 534351) {
+    // Scroll Sepolia
+    const res = await generateScrollProof(Number(block), token, voter);
+    return res.proof
+  }
   // TODO
   const SLEEP_DELAY = 60 * 1000;
   await new Promise(resolve => setTimeout(resolve, SLEEP_DELAY));
