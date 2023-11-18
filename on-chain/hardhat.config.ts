@@ -37,9 +37,16 @@ const config: HardhatUserConfig = {
             accounts: [`${process.env.PRIVATE_KEY}`],
             loggingEnabled: true,
         },
-        xdctestnet: {
-            url: `https://rpc.apothem.network`,
+        xdc: {
+            url: `https://erpc.apothem.network`,
             chainId: 51,
+            gasMultiplier: 1.2,
+            accounts: [`${process.env.PRIVATE_KEY}`],
+            loggingEnabled: true,
+        },
+        scroll: {
+            url: `https://sepolia-rpc.scroll.io/`,
+            chainId: 534351,
             gasMultiplier: 1.2,
             accounts: [`${process.env.PRIVATE_KEY}`],
             loggingEnabled: true,
