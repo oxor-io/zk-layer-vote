@@ -7,6 +7,8 @@ import '@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol
 import '@openzeppelin/contracts/governance/extensions/GovernorVotes.sol';
 import '@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol';
 
+import 'hardhat/console.sol';
+
 struct ProposalStateRoot {
     bytes32 root;
     uint256 l2BlockNumber;
@@ -31,12 +33,12 @@ contract GovernorL1 is
     GovernorVotes,
     GovernorVotesQuorumFraction
 {
-    IStateRootStorage stateRootStorage;
+    IStateRootStorage public stateRootStorage;
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public l2VoteCounter;
     mapping(uint256 => mapping(uint256 => ProposalStateRoot)) public proposalStateRoots;
     mapping(uint256 => IVerifier) public verifiers;
 
-    uint256[2] public chains = [534351, 1]; // scroll, test
+    uint256[4] public chainIds = [534351, 1, 2, 3]; // scroll-sepolia, test...
 
     constructor(
         IVotes _token,
@@ -45,7 +47,7 @@ contract GovernorL1 is
         IStateRootStorage rootStarage
     )
         Governor('Governor')
-        GovernorSettings(7200 /* 1 day */, 50400 /* 1 week */, 0)
+        GovernorSettings(0, 50400 /* 1 week */, 0)
         GovernorVotes(_token)
         GovernorVotesQuorumFraction(4)
     {   
@@ -54,7 +56,7 @@ contract GovernorL1 is
         verifiers[534351] = scrollVerifier;
     }
 
-    function castVoteFromL2(
+    function castVoteCC(
         uint256 proposalId, 
         address voter, 
         uint8 support,
@@ -90,13 +92,13 @@ contract GovernorL1 is
         if (chainId == 534351) { // scroll sepolia
             // TODO check proof
         } else { // other chains
-            require(
-            verifiers[0].verifyProof(
-                proof,
-                [uint256(root), uint256(uint160(voter)), uint256(uint160(l2TokenAddress)), weight]
-            ),
-            "Invalid proof"
-            );
+            // require(
+            // verifiers[0].verifyProof(
+            //     proof,
+            //     [uint256(root), uint256(uint160(voter)), uint256(uint160(l2TokenAddress)), weight]
+            // ),
+            // "Invalid proof"
+            // );
         }
     }
 
@@ -106,8 +108,15 @@ contract GovernorL1 is
         bytes[] memory calldatas,
         string memory description
     ) public override returns (uint256) {
-        // TODO save state roots
-        super.propose(targets, values, calldatas, description);
+        // save L2 state roots in proposal init block
+        uint256 proposalId = super.propose(targets, values, calldatas, description);
+        for (uint256 i = 0; i >= chainIds.length; i++) {
+            proposalStateRoots[proposalId][chainIds[i]].root = stateRootStorage.stateRoots(chainIds[i]).root;
+            proposalStateRoots[proposalId][chainIds[i]].l2BlockNumber = stateRootStorage.stateRoots(chainIds[i]).l2BlockNumber;
+        }
+        // TODO save scroll storage root
+        console.log(proposalId);
+        return proposalId;
     }
 
     // The following functions are overrides required by Solidity.

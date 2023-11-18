@@ -6,7 +6,7 @@ import '@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol';
 
 contract VotesTokenL1 is ERC20, ERC20Permit, ERC20Votes {
-    constructor() ERC20('MyToken', 'MTK') ERC20Permit('MyToken') {
+    constructor() ERC20('Governance Token L1', 'GTL1') ERC20Permit('GTL1') {
         _mint(msg.sender, 100_000 * 1e18);
     }
 
