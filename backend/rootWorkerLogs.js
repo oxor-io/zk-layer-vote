@@ -2,34 +2,50 @@ const ethers = require("ethers");
 const { generateTree, proofElementInTree, selializeTree } = require("./generateMerkleTree");
 const { createClient } = require('redis');
 const ABI_ERC20 = require("./abi/Erc20.json");
-const ABI_STATE_ROOT_L1 = require("./abi/StateRootL1.json");
+const { abi: ABI_STATE_ROOT_L1 } = require("./abi/StateRootL1.json");
 const { default: MerkleTree } = require("fixed-merkle-tree");
 require("dotenv").config();
 
-// XDC Network == 50
-// XDC Apothem Network == 51
-const CHAIN_ID = 51
+const chainCfg = {
+  1: {
+    chainId: 1,
+    providerUrl: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
+  },
+  50: {
+    chainId: 50,
+    // XDC Network
+    // providerUrl:
+  },
+  51: {
+    // XDC Apothem Network
+    chainId: 51,
+    providerUrl: `https://erpc.apothem.network`,
+  },
+  11155111: {
+    // Sepolia
+    chainId: 11155111,
+    providerUrl: `https://ethereum-sepolia.publicnode.com`,
+  },
+  534351: {
+    // Scroll Sepolia Testnet
+    chainId: 534351,
+    providerUrl: `https://scroll-testnet-public.unifra.io`,
+  }
+}
 
-const TIMEOUT_INTERVAL = 10000
-const FROM_BLOCK_NUMBER = 57005948 // XDC (18597627 for mainnet)
-const TREE_HEIGHT = 20
+const cfgL1 = chainCfg[process.env.CHAIN_ID_L1]
+const cfgL2 = chainCfg[process.env.CHAIN_ID_L2]
 
 // providers
-const PROVIDER_L1 = new ethers.JsonRpcProvider(
-  // `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`
-  `https://ethereum-sepolia.publicnode.com`
-)
-const PROVIDER_L2 = new ethers.JsonRpcProvider(
-  // `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`
-  `https://erpc.apothem.network`
-)
+const PROVIDER_L1 = new ethers.JsonRpcProvider(cfgL1.providerUrl)
+const PROVIDER_L2 = new ethers.JsonRpcProvider(cfgL2.providerUrl)
 
-const USDT_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7" // mainnet USDT Contract
-const FXD_ADDRESS = "0xDf29cB40Cb92a1b8E8337F542E3846E185DefF96" // XDC FXD Contract
-// const STATE_ROOT_ADDRESS = "0xbb8c8E79c34C6420716A6937bF7E3B9226Cc81f5"
-// const CONTRACT_L1 = new ethers.Contract(STATE_ROOT_ADDRESS, ABI_STATE_ROOT_L1, PROVIDER_L1)
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, PROVIDER_L1)
 
-const ERC20_L2 = FXD_ADDRESS
+const STATE_ROOT_ADDRESS = "0xbb8c8E79c34C6420716A6937bF7E3B9226Cc81f5"
+const CONTRACT_L1 = new ethers.Contract(STATE_ROOT_ADDRESS, ABI_STATE_ROOT_L1, wallet)
+
+const ERC20_L2 = process.env.FXD_ADDRESS
 const CONTRACT_L2 = new ethers.Contract(ERC20_L2, ABI_ERC20, PROVIDER_L2)
 
 // Redis client
@@ -69,12 +85,12 @@ async function storeBalances(logs) {
 
     const balance = await getAddressBalance(address)
     console.log("New Address&Balance: ", address, balance)
-    await client.hSet(`chainId-${CHAIN_ID}-balances`, address, balance.toString())
+    await client.hSet(`chainId-${cfgL2.chainId}-balances`, address, balance.toString())
   }
 }
 
 async function getTreeLeafs() {
-  const storedBalances = await client.hGetAll(`chainId-${CHAIN_ID}-balances`);
+  const storedBalances = await client.hGetAll(`chainId-${cfgL2.chainId}-balances`);
 
   let leafsData = []
   for (const address in storedBalances) {
@@ -87,10 +103,10 @@ async function getTreeLeafs() {
 }
 
 async function storeTree(blockNumber, leafsData) {
-  const tree = await generateTree(TREE_HEIGHT, leafsData)
+  const tree = await generateTree(process.env.TREE_HEIGHT, leafsData)
   const treeStr = await selializeTree(tree)
 
-  await client.hSet(`chainId-${CHAIN_ID}-trees`, blockNumber.toString(), treeStr);
+  await client.hSet(`chainId-${cfgL2.chainId}-trees`, blockNumber.toString(), treeStr);
   console.log("Tree root: ", tree.root)
   return tree
 }
@@ -104,12 +120,13 @@ async function checkTree(tree, leafsData) {
 }
 
 async function sendNewRoot(root, blockNumber) {
-  console.log("[TODO] Send root and blockNumber: ", root, blockNumber)
-  CONTRACT_L1.addStateRoot(CHAIN_ID, root, blockNumber)
+  console.log("Send root and blockNumber: ", root, blockNumber)
+  CONTRACT_L1.addStateRoot(cfgL2.chainId, ethers.toBeHex(root), blockNumber)
 }
 
 async function sleep() {
-  await new Promise(r => setTimeout(r, TIMEOUT_INTERVAL))
+  console.log("Sleep...")
+  await new Promise(r => setTimeout(r, process.env.TIMEOUT_INTERVAL))
 }
 
 const main = async () => {
@@ -119,10 +136,16 @@ const main = async () => {
 
   let condition = true
 
-  let fromBlock = FROM_BLOCK_NUMBER;
+  let fromBlock = parseInt(process.env.FROM_BLOCK_NUMBER);
 
   while (condition) {
+    console.log(`BlockNumber: ${fromBlock}`)
+
     let logs = await getLogs(fromBlock)
+    if (logs.length == 0) {
+      await sleep()
+      continue
+    }
 
     // @todo process all logs
     logs = logs.length > 5 ? logs.slice(0, 5) : logs
@@ -136,12 +159,10 @@ const main = async () => {
     await checkTree(tree, leafsData)
 
     await sendNewRoot(tree.root, fromBlock)
+
     fromBlock = logs[logs.length-1].blockNumber + 1
 
     await sleep()
-
-    // @todo unlimit loop
-    condition = false
   }
 
   await client.disconnect();
