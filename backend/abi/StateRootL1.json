@@ -1,0 +1,77 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "StateRootL1",
+  "sourceName": "contracts/StateRootL1.sol",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "chainId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "root",
+          "type": "bytes32"
+        }
+      ],
+      "name": "RootAdded",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "chainId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "stateRoot",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "blockNumber",
+          "type": "uint256"
+        }
+      ],
+      "name": "addStateRoot",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "stateRoots",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "root",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "l2BlockNumber",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608060405234801561001057600080fd5b50610173806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80634916a2a21461003b578063f4cac30d14610050575b600080fd5b61004e6100493660046100f8565b610090565b005b61007761005e366004610124565b6000602081905290815260409020805460019091015482565b6040805192835260208301919091520160405180910390f35b60408051808201825283815260208082018481526000878152808352849020925183555160019092019190915581518581529081018490527f47e13ec4cc37e31e3a4f25115640068ffbe4bee53b32f0953fa593388e69fc0f910160405180910390a1505050565b60008060006060848603121561010d57600080fd5b505081359360208301359350604090920135919050565b60006020828403121561013657600080fd5b503591905056fea2646970667358221220bab5459d8c2a0e262c53bb7a7c0a425c195c2d4a4967d12e58c0818e14cdb84e64736f6c63430008140033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100365760003560e01c80634916a2a21461003b578063f4cac30d14610050575b600080fd5b61004e6100493660046100f8565b610090565b005b61007761005e366004610124565b6000602081905290815260409020805460019091015482565b6040805192835260208301919091520160405180910390f35b60408051808201825283815260208082018481526000878152808352849020925183555160019092019190915581518581529081018490527f47e13ec4cc37e31e3a4f25115640068ffbe4bee53b32f0953fa593388e69fc0f910160405180910390a1505050565b60008060006060848603121561010d57600080fd5b505081359360208301359350604090920135919050565b60006020828403121561013657600080fd5b503591905056fea2646970667358221220bab5459d8c2a0e262c53bb7a7c0a425c195c2d4a4967d12e58c0818e14cdb84e64736f6c63430008140033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
