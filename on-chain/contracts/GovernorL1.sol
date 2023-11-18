@@ -7,8 +7,6 @@ import '@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol
 import '@openzeppelin/contracts/governance/extensions/GovernorVotes.sol';
 import '@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol';
 
-import 'hardhat/console.sol';
-
 struct ProposalStateRoot {
     bytes32 root;
     uint256 l2BlockNumber;
@@ -63,13 +61,7 @@ contract GovernorL1 is
         uint256 weight, 
         uint256 chainId, 
         bytes calldata proof) public returns (uint256) {
-        // TODO
-        // _validateStateBitmap(proposalId, _encodeStateBitmap(ProposalState.Active));
-
-        // TODO token address check l2TokenAddress
-        address l2TokenAddress = address(this);
-
-        checkProof(chainId, proposalStateRoots[proposalId][chainId].root, proof, voter, l2TokenAddress, weight);
+        checkProof(chainId, proposalStateRoots[proposalId][chainId].root, proof, voter, weight);
 
         require(l2VoteCounter[proposalId][chainId][voter] == false);
         l2VoteCounter[proposalId][chainId][voter] = true;
@@ -86,11 +78,11 @@ contract GovernorL1 is
         bytes32 root,
         bytes calldata proof,
         address voter,
-        address l2TokenAddress,
         uint256 weight
     ) internal {
         if (chainId == 534351) { // scroll sepolia
             // TODO check proof
+            // add l2TokenAddress
         } else { // other chains
             // require(
             // verifiers[0].verifyProof(
@@ -110,12 +102,11 @@ contract GovernorL1 is
     ) public override returns (uint256) {
         // save L2 state roots in proposal init block
         uint256 proposalId = super.propose(targets, values, calldatas, description);
-        for (uint256 i = 0; i >= chainIds.length; i++) {
+        for (uint256 i = 0; i < chainIds.length; i++) {
             proposalStateRoots[proposalId][chainIds[i]].root = stateRootStorage.stateRoots(chainIds[i]).root;
             proposalStateRoots[proposalId][chainIds[i]].l2BlockNumber = stateRootStorage.stateRoots(chainIds[i]).l2BlockNumber;
         }
-        // TODO save scroll storage root
-        console.log(proposalId);
+        // TODO scroll chain root
         return proposalId;
     }
 
