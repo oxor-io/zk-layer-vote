@@ -21,7 +21,7 @@ const config: HardhatUserConfig = {
         hardhat: {
             forking: {
                 url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-                blockNumber: 4717000,
+                blockNumber: 4720400,
             },
             chainId: 11155111,
             allowUnlimitedContractSize: false,
@@ -47,6 +47,48 @@ const config: HardhatUserConfig = {
         scroll: {
             url: `https://sepolia-rpc.scroll.io/`,
             chainId: 534351,
+            gasMultiplier: 1.2,
+            accounts: [`${process.env.PRIVATE_KEY}`],
+            loggingEnabled: true,
+        },
+        arbitrum: {
+            url: `https://sepolia-rollup.arbitrum.io/rpc`,
+            chainId: 421614,
+            gasMultiplier: 1.2,
+            accounts: [`${process.env.PRIVATE_KEY}`],
+            loggingEnabled: true,
+        },
+        gnosis: {
+            url: `https://gnosis.publicnode.com`,
+            chainId: 100,
+            gasMultiplier: 1.2,
+            accounts: [`${process.env.PRIVATE_KEY}`],
+            loggingEnabled: true,
+        },
+        base: {
+            url: `https://goerli.base.org`,
+            chainId: 84531,
+            gasMultiplier: 1.2,
+            accounts: [`${process.env.PRIVATE_KEY}`],
+            loggingEnabled: true,
+        },
+        celo: {
+            url: `https://alfajores-forno.celo-testnet.org`,
+            chainId: 44787,
+            gasMultiplier: 1.2,
+            accounts: [`${process.env.PRIVATE_KEY}`],
+            loggingEnabled: true,
+        },
+        polygon: {
+            url: `https://rpc.public.zkevm-test.net`,
+            chainId: 1442,
+            gasMultiplier: 1.2,
+            accounts: [`${process.env.PRIVATE_KEY}`],
+            loggingEnabled: true,
+        },
+        linea: {
+            url: `https://rpc.goerli.linea.build`,
+            chainId: 59140,
             gasMultiplier: 1.2,
             accounts: [`${process.env.PRIVATE_KEY}`],
             loggingEnabled: true,

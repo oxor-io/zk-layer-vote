@@ -22,8 +22,12 @@ describe('Governance tests', () => {
         const voteTokenL1 = (await TokenL1Factory.deploy()) as VotesTokenL1;
 
         // deploy stateRootL1
-        const StateRootL1Factory = await ethers.getContractFactory('StateRootL1');
-        const stateRootL1 = (await StateRootL1Factory.deploy()) as StateRootL1;
+        // const StateRootL1Factory = await ethers.getContractFactory('StateRootL1');
+        // const stateRootL1 = (await StateRootL1Factory.deploy()) as StateRootL1;
+        const stateRootL1 = await ethers.getContractAt(
+            'StateRootL1',
+            '0xbb8c8E79c34C6420716A6937bF7E3B9226Cc81f5',
+          )
 
         await voteTokenL1.delegate(voter.address);
         expect(await voteTokenL1.getVotes(voter.address)).to.eq(parseUnits('100000', 'ether'));
@@ -59,7 +63,7 @@ describe('Governance tests', () => {
         expect(await governor.verifiers(534351)).to.eq(scrollVerifier.address);
     });
 
-    it.only('vote through new method', async () => {
+    it('vote through new method', async () => {
         const { voter, dao, voteTokenL1, stateRootL1, governor, scrollVerifier, verifier } =
             await loadFixture(deployFixture);
 
@@ -72,6 +76,12 @@ describe('Governance tests', () => {
         );
 
         const proposalId = parseUnits('35928371837687212312510759377445004591634905092141210148714412203328748565927', 'wei');
+        
+        let stateRoot = await governor.proposalStateRoots(proposalId, 534351)
+        console.log(stateRoot)
+
+        stateRoot = await stateRootL1.stateRoots(534351)
+        console.log(stateRoot)
 
         // wait 1 blocks to start voting
         await mine(1);
