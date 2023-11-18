@@ -50,7 +50,7 @@ async function generateProof(chainId, stateRoot, block, token, voter) {
 }
 
 async function castVote(chainId, proposalId, voter, support, weight, proof) {
-  const GOVERNOR_ADDRESS = '0xD7A1DC78F0E90Ab2645E1DbECf6135D17c7dA411'
+  const GOVERNOR_ADDRESS = '0x990cD37e51a60A7D0756CA671A80e4A33FB0413A'
   const GovernorL1 = new ethers.Contract(GOVERNOR_ADDRESS, GovernorL1Meta.abi, signerL1);
   const tx = await GovernorL1.castVoteCC(proposalId, voter, support, weight, chainId, proof)
   await tx.wait();
