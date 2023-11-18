@@ -64,25 +64,42 @@ describe('Governance tests', () => {
             await loadFixture(deployFixture);
 
         // create proposal
-        let tx = await governor.propose(
+        await governor.propose(
             [scrollVerifier.address],
             [100],
             ['0x00'],
             '123'
         );
 
+        const proposalId = parseUnits('35928371837687212312510759377445004591634905092141210148714412203328748565927', 'wei');
 
+        // wait 1 blocks to start voting
+        await mine(1);
 
-        console.log(await tx.wait());
-
+        let voteItem = await governor.proposalVotes(proposalId);
+        expect(voteItem.forVotes).to.eq(parseUnits('0', 'ether'));
 
         // vote with castVote
-        await governor.connect(voter).castVote(proposalId, parseUnits('0', 'wei'));
-        // expect(governor.currentVotes).to.eq(parseUnits('2000', 'ether'));
+        // console.log(await governor.state(proposalId));
+        // s
+
+        // console.log(await governor.proposalVotes(proposalId));
+        // voteItem = await governor.proposalVotes(proposalId);
+        // expect(voteItem.forVotes).to.eq(parseUnits('100000', 'ether'));
 
 
-        // // vote with castVoteFromL2
-        // await governor.castVoteFromL2();
-        // expect(gaugeItem.currentVotes).to.eq(parseUnits('2000', 'ether'));
+        // vote with castVoteFromL2
+        await governor.castVoteCC(
+            proposalId, 
+            voter.address, 
+            parseUnits('1', 'wei'),
+            voter.address, // TODO
+            parseUnits('123', 'ether'), 
+            1, 
+            '0x00'
+        );
+
+        voteItem = await governor.proposalVotes(proposalId);
+        expect(voteItem.forVotes).to.eq(parseUnits('123', 'ether'));
     });
 });
