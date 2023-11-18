@@ -60,14 +60,14 @@ contract GovernorL1 is
         uint256 proposalId, 
         address voter, 
         uint8 support,
-        address l2TokenAddress,
         uint256 weight, 
         uint256 chainId, 
         bytes calldata proof) public returns (uint256) {
         // TODO
         // _validateStateBitmap(proposalId, _encodeStateBitmap(ProposalState.Active));
 
-        // TODO token address check
+        // TODO token address check l2TokenAddress
+        address l2TokenAddress = address(this);
 
         checkProof(chainId, proposalStateRoots[proposalId][chainId].root, proof, voter, l2TokenAddress, weight);
 

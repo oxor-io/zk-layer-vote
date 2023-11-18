@@ -30,6 +30,20 @@ const config: HardhatUserConfig = {
             gasPrice: 'auto',
             loggingEnabled: false,
         },
+        sepolia: {
+            url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
+            chainId: 11155111,
+            gasMultiplier: 1.2,
+            accounts: [`${process.env.PRIVATE_KEY}`],
+            loggingEnabled: true,
+        },
+        xdctestnet: {
+            url: `https://rpc.apothem.network`,
+            chainId: 51,
+            gasMultiplier: 1.2,
+            accounts: [`${process.env.PRIVATE_KEY}`],
+            loggingEnabled: true,
+        },
     },
     solidity: {
         compilers: [

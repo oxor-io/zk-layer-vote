@@ -93,7 +93,6 @@ describe('Governance tests', () => {
             proposalId, 
             voter.address, 
             parseUnits('1', 'wei'),
-            voter.address, // TODO
             parseUnits('123', 'ether'), 
             1, 
             '0x00'

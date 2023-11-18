@@ -6,6 +6,7 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 contract DelegateL2 {
 
     mapping(address => mapping(address => mapping(address => uint256))) public delegated;
+    mapping(address => mapping(address => uint256)) public delegatedOf;
 
     event Delegated(
         address from,
@@ -27,6 +28,7 @@ contract DelegateL2 {
         token.transferFrom(msg.sender,  address(this), amount);
 
         delegated[address(token)][msg.sender][to] += amount;
+        delegatedOf[address(token)][to] += amount;
 
         emit Delegated(msg.sender, to, amount);
     }
@@ -37,6 +39,7 @@ contract DelegateL2 {
         uint256 amount
     ) public {
         delegated[address(token)][msg.sender][to] -= amount;
+        delegatedOf[address(token)][to] -= amount;
 
         emit MoveDelegated(msg.sender, to, amount);
     }
