@@ -3,6 +3,7 @@ const { generateTree, proofElementInTree } = require("./generateMerkleTree");
 const { createClient } = require('redis');
 const ABI_ERC20 = require("./abi/Erc20.json");
 const ABI_STATE_ROOT_L1 = require("./abi/StateRootL1.json");
+const { default: MerkleTree } = require("fixed-merkle-tree");
 require("dotenv").config();
 
 // XDC Network == 50
@@ -34,10 +35,7 @@ const ERC20_L2 = FXD_ADDRESS
 const CONTRACT_L2 = new ethers.Contract(ERC20_L2, ABI_ERC20, PROVIDER_L2)
 
 
-const client = await createClient()
-  .on('error', err => console.log('Redis Client Error', err))
-  .connect();
-
+let client
 
 // address -> balance
 let db = {};
@@ -45,7 +43,7 @@ let db = {};
 
 async function getLogs(fromBlock) {
   // https://docs.alchemy.com/docs/deep-dive-into-eth_getlogs#what-are-event-signatures
-  return await PROVIDER_L2.getLogs(
+  const logs = await PROVIDER_L2.getLogs(
     {
       "fromBlock": fromBlock,
       "toBlock": "latest",
@@ -56,6 +54,9 @@ async function getLogs(fromBlock) {
       ]
     }
   )
+
+  console.log("Logs number at all: ", logs.length)
+  return logs
 }
 
 
@@ -67,21 +68,44 @@ async function getAddressBalance(address) {
 async function parseLogs(logs) {
   for (let i=0; i<logs.length; i++) {
     const address = '0x' + logs[i].topics[1].slice(26)
-    if (address in db) continue
-    db[address] = await getAddressBalance(address)
-    console.log("New Address&Balance: ", address, db[address])
+
+    // @todo pass already added addresses
+    // if (address in db) continue
+
+    const balance = await getAddressBalance(address)
+    console.log("New Address&Balance: ", address, balance)
+    await client.hSet(`chainId-${CHAIN_ID}-balances`, address, balance.toString())
   }
 }
 
 async function getTreeLeafs() {
+  const storedBalances = await client.hGetAll(`chainId-${CHAIN_ID}-balances`);
+
   let leafsData = []
-  for (const balanceAddress in db) {
-    leafsData.push([balanceAddress, db[balanceAddress]])
-    console.log(`Leafs Address&Balance: ${balanceAddress}: ${db[balanceAddress]}`);
+  for (const address in storedBalances) {
+    const balance = storedBalances[address]
+    leafsData.push([address, balance])
+    console.log(`Leafs Address&Balance: ${address}: ${balance}`);
   }
   console.log("Leafs count: ", leafsData.length)
-
   return leafsData
+}
+
+async function storeTree(blockNumber, leafsData) {
+  const tree = await generateTree(TREE_HEIGHT, leafsData)
+
+  const treeStr = JSON.stringify(tree.serialize(), (key, value) =>
+    typeof value === 'bigint'
+        ? value.toString()
+        : value // return everything else unchanged
+  )
+
+  // Deserialization
+  // MerkleTree.deserialize(JSON.parse(treeStr))
+
+  await client.hSet(`chainId-${CHAIN_ID}-trees`, blockNumber.toString(), treeStr);
+  console.log("Tree root: ", tree.root)
+  return tree
 }
 
 async function checkTree(tree, leafsData) {
@@ -98,13 +122,16 @@ async function sendNewRoot(root, blockNumber) {
 }
 
 const main = async () => {
+  client = await createClient()
+    .on('error', err => console.log('Redis Client Error', err))
+    .connect();
+
   let condition = true
 
   let fromBlock = FROM_BLOCK_NUMBER;
 
   while (condition) {
     let logs = await getLogs(fromBlock)
-    console.log("Logs number at all: ", logs.length)
 
     // @todo process all logs
     logs = logs.length > 5 ? logs.slice(0, 5) : logs
@@ -112,16 +139,16 @@ const main = async () => {
 
     await parseLogs(logs)
     const leafsData = await getTreeLeafs()
-    const tree = await generateTree(TREE_HEIGHT, leafsData)
-    console.log("Tree root: ", tree.root)
-
-    // @todo send to the state-root contract of main network
+    const tree = await storeTree(fromBlock, leafsData)
 
     await checkTree(tree, leafsData)
+
     await sendNewRoot(tree.root, fromBlock)
     fromBlock = logs[logs.length-1].blockNumber + 1
 
     await new Promise(r => setTimeout(r, TIMEOUT_INTERVAL))
+
+    // @todo unlimit loop
     condition = false
   }
 
