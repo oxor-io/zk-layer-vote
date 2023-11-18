@@ -84,13 +84,16 @@ async function getAddressBalance(address) {
 
 
 async function storeBalances(logs) {
+  const storedBalances = await client.hGetAll(`chainId-${cfgL2.chainId}-balances`);
+
   for (let i=0; i<logs.length; i++) {
     const address = '0x' + logs[i].topics[2].slice(26)
-
-    // @todo pass already added addresses
-    // if (address in db) continue
-
     const balance = await getAddressBalance(address)
+
+    if (address in storeBalances || storedBalances[address] == balance.toString()) {
+      continue
+    }
+
     console.log("New Address&Balance: ", address, balance)
     await client.hSet(`chainId-${cfgL2.chainId}-balances`, address, balance.toString())
   }
