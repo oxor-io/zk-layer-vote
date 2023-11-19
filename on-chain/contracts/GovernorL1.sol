@@ -36,7 +36,16 @@ contract GovernorL1 is
     mapping(uint256 => mapping(uint256 => ProposalStateRoot)) public proposalStateRoots;
     mapping(uint256 => IVerifier) public verifiers;
 
-    uint256[4] public chainIds = [534351, 1, 2, 3]; // scroll-sepolia, test...
+    uint256[8] public chainIds = [
+        51,
+        534351,
+        421614,
+        100,
+        84531,
+        44787,
+        1442,
+        59140
+    ];
 
     constructor(
         IVotes _token,
