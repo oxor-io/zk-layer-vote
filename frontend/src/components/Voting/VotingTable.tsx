@@ -77,18 +77,19 @@ const VotingTable = () => {
             paddingBottom: "20px",
           }}
         >
-          {chainId.toString() === process.env.REACT_APP_L1_NETWORK && (
-            <ButtonPrimary
-              isLoading={createProposalLoading}
-              onClick={createProposal}
-            >
-              {createProposalLoading ? (
-                <CircularProgress size={30} />
-              ) : (
-                "Create Proposal"
-              )}
-            </ButtonPrimary>
-          )}
+          {chainId.toString() === process.env.REACT_APP_L1_NETWORK &&
+            account.address && (
+              <ButtonPrimary
+                isLoading={createProposalLoading}
+                onClick={createProposal}
+              >
+                {createProposalLoading ? (
+                  <CircularProgress size={30} />
+                ) : (
+                  "Create Proposal"
+                )}
+              </ButtonPrimary>
+            )}
         </Box>
         <TableContainer component={TablePaper}>
           <Table sx={{ minWidth: 650 }} aria-label="simple table">
