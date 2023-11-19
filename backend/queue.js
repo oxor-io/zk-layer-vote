@@ -50,11 +50,6 @@ async function generateProof(chainId, stateRoot, block, token, voter) {
   // run nargo
   const proof = await generateNoirProof(stateRoot, block, token, voter)
   return proof
-
-  // const SLEEP_DELAY = 60 * 1000;
-  // await new Promise(resolve => setTimeout(resolve, SLEEP_DELAY));
-  // const genRanProof = words => '0x' + [...Array(words * 32 * 2)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-  // return genRanProof(20)
 }
 
 async function generateNoirProof(stateRoot, block, token, voter) {
