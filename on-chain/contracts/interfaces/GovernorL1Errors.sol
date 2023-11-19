@@ -9,4 +9,5 @@ interface GovernorL1Errors {
     error GovernorL1__lengthMismatched();
     error GovernorL1__zeroAddress();
     error GovernorL1__incorrectChainId();
+    error GovernorL1__incorrectProof();
 }

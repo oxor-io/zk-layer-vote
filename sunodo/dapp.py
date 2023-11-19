@@ -23,9 +23,40 @@ def handle_advance(data):
     logger.info(f"Received advance request data {data}")
 
     try:
-        payload_json = json.loads(hex2str(data["payload"]))
-        result = zk_prover.prove(payload_json)
+        payload = json.loads(hex2str(data["payload"]))
+        result = zk_prover.prove(payload)
         logger.info(f"ZK Prove: {result}")
+
+        # Encode a castVoteCC function call on Governor.sol
+        # function castVoteCC(
+        #     uint256 proposalId,
+        #     address voter,
+        #     uint8 support,
+        #     uint256 weight,
+        #     uint256 chainId,
+        #     bytes calldata proof
+        # )
+        TRANSFER_FUNCTION_SELECTOR = b'\xa7\x04\x9c\xbb'
+        voucher_payload = TRANSFER_FUNCTION_SELECTOR + encode([
+            'uint256','address', 'uint8', 'uint256', 'uint256', 'bytes'],
+            [
+                payload['proposalId'],
+                payload['voter'],
+                proposalId['support'],
+                proposalId['weight'],
+                proposalId['chainId'],
+                result,
+            ]
+        )
+        # Post voucher executing the vote on L1
+        voucher = {
+            "destination": payload['destination'],
+            "payload": "0x" + voucher_payload.hex(),
+        }
+        logger.info(f"Issuing voucher {voucher}")
+        response = requests.post(rollup_server + "/voucher", json=voucher)
+        logger.info(f"Received voucher status {response.status_code} body {response.content}")
+
     except Exception as e:
         logger.error(e)
         return "reject"
