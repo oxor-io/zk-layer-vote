@@ -38,25 +38,47 @@ proofsQueue.on('completed', (job, result) => {
 })
 
 async function generateProof(chainId, stateRoot, block, token, voter) {
+  // use sunodo to generate proof
+  await generateCartesiProof(chainId, stateRoot, block, token, voter)
+
   if (chainId == 534351) {
     // Scroll Sepolia
     const res = await generateScrollProof(Number(block), token, voter);
     return res.proof
   }
 
-  const proof = await generateNoirProof()
+  // run nargo
+  const proof = await generateNoirProof(stateRoot, block, token, voter)
   return proof
+
   // const SLEEP_DELAY = 60 * 1000;
   // await new Promise(resolve => setTimeout(resolve, SLEEP_DELAY));
   // const genRanProof = words => '0x' + [...Array(words * 32 * 2)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
   // return genRanProof(20)
 }
 
-async function generateNoirProof() {
-  const cwd = '../circuits'
+async function generateNoirProof(stateRoot, block, token, voter) {
+  const cwd = '../aztec/circuits'
   await exec('nargo prove', {cwd: cwd})
   const proof = fs.readFileSync(`${cwd}/proofs/recursion.proof`, 'utf-8')
   return `0x${proof}`
+}
+
+async function generateCartesiProof(chainId, stateRoot, block, token, voter) {
+  const cwd = '../sunodo'
+  const payload = {
+    stateRoot,
+    block,
+    token,
+    voter,
+  }
+  const args = [
+    '--mnemonic-index=0',
+    `--mnemonic-passphrase='${process.env.PRIVATE_KEY}'`,
+    `--chain-id=${chainId}`,
+    `--input=${JSON.stringify(payload)}`,
+  ]
+  await exec('sunodo send generic', args, {cwd: cwd})
 }
 
 async function castVote(chainId, proposalId, voter, support, weight, proof) {

@@ -1,6 +1,9 @@
 from os import environ
 import logging
 import requests
+import json
+
+from prover import Prover
 
 logging.basicConfig(level="INFO")
 logger = logging.getLogger(__name__)
@@ -8,14 +11,39 @@ logger = logging.getLogger(__name__)
 rollup_server = environ["ROLLUP_HTTP_SERVER_URL"]
 logger.info(f"HTTP rollup_server url is {rollup_server}")
 
+zk_prover = Prover(
+    circuit_filepath='circuit.json',
+    verbose=False,
+    backend_path='/opt/backend',
+    base_filepath='circuit',
+)
+
 
 def handle_advance(data):
     logger.info(f"Received advance request data {data}")
+
+    try:
+        payload_json = json.loads(hex2str(data["payload"]))
+        result = zk_prover.prove(payload_json)
+        logger.info(f"ZK Prove: {result}")
+    except Exception as e:
+        logger.error(e)
+        return "reject"
+
     return "accept"
 
 
 def handle_inspect(data):
     logger.info(f"Received inspect request data {data}")
+
+    try:
+        payload_json = json.loads(hex2str(data["payload"]))
+        result = zk_prover.prove(payload_json)
+        logger.info(f"ZK Prove: {result}")
+    except Exception as e:
+        logger.error(e)
+        return "reject"
+
     return "accept"
 
 
