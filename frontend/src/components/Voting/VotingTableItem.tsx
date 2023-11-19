@@ -51,6 +51,10 @@ const VotingTableItem: FC<VotingTableItemProps> = ({
   const { open: openedModal } = useWeb3ModalState();
   const chainId = useChainId();
 
+  console.log({
+    openedModal,
+  });
+
   useEffect(() => {
     if (showNetworkCheck) {
       if (
@@ -58,9 +62,11 @@ const VotingTableItem: FC<VotingTableItemProps> = ({
         chainId.toString() === process.env.REACT_APP_L1_NETWORK
       ) {
         open({ view: "Networks" });
+        setShowNetworkCheck(false);
       } else if (chainId.toString() !== process.env.REACT_APP_L1_NETWORK) {
         close();
         setShowVotingModal(true);
+        setShowNetworkCheck(false);
       }
     }
   }, [
