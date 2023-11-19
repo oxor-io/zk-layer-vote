@@ -1,0 +1,9 @@
+hash_path = [
+  "0x2602c38da657e789f986c0a61f9901a486210daad836a200ebcd8b38420e04d6",
+  "0x2e3c9acec1fd409f2a5332178a67eb32c241f12c6d8c3cb231e423de9f8e6e84"
+]
+index = "0"
+proposalId = "0"
+root = "0x15f45039fa067f0e1c6a5abc6c9a6d28e8f79c18aabf5bb06abf053537c228a4"
+secret = ["1", "10"]
+vote = "1"
