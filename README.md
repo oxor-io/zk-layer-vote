@@ -1,28 +1,33 @@
-# Installation
+# zk-layer-vote
 
-## Frontend module
-1.
-2.
-3.
+This repo contains source files of a cross-chain voting protocol for ETHGlobal Istanbul 2023.
 
-## Backend module
-1. `npm install`
-2. `docker-compose up` - run Redis in Docker
-3. `npm start` - run server
+[![](https://img.youtube.com/vi/N18IXQyNN14/0.jpg)](https://www.youtube.com/watch?v=N18IXQyNN14 "zkvote demo")
 
-## On-chain module
-1.
-2.
-3.
+## Installation
 
-## ZK Proof generator
-1.
-2.
-3.
+### Frontend module
+1. `npm install` - Install all dependencies
+2. `npm run build` - Build the project
+3. `npm start` - Start the frontend server
 
-# Deployments
+### Backend module
+1. `npm install` - Install all dependencies
+2. `docker-compose up` - Run Redis in Docker
+3. `npm start` - Start the backend server
 
-## Twitter
+### On-chain module
+1. `npm install` - Install all dependencies
+2. `hardhat compile` - Compile the smart contracts
+3. `hardhat migrate` - Deploy the smart contracts
+
+### ZK Proof generator
+1. `npm install` - Install all dependencies
+2. `node generate.js` - Generate the zero-knowledge proofs
+
+## Deployments
+
+### Twitter
 
 - [Gnosis Twitter Announce](https://twitter.com/Hilaymanai/status/1726068600484598095)
 
@@ -112,21 +117,8 @@
 
 # Demonstration
 
-## Workflow demo
 
-# Configuration
 
-## Programming languages
-
-1.
-
-## Libraries
-
-1.
-
-## Frameworks
-
-1.
 
 # Future track
 
