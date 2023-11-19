@@ -38,6 +38,9 @@ proofsQueue.on('completed', (job, result) => {
 })
 
 async function generateProof(chainId, stateRoot, block, token, voter) {
+  // use sunodo to generate proof
+  await generateCartesiProof(chainId, stateRoot, block, token, voter)
+
   if (chainId == 534351) {
     // Scroll Sepolia
     const res = await generateScrollProof(Number(block), token, voter);
@@ -59,6 +62,23 @@ async function generateNoirProof(stateRoot, block, token, voter) {
   await exec('nargo prove', {cwd: cwd})
   const proof = fs.readFileSync(`${cwd}/proofs/recursion.proof`, 'utf-8')
   return `0x${proof}`
+}
+
+async function generateCartesiProof(chainId, stateRoot, block, token, voter) {
+  const cwd = '../sunodo'
+  const payload = {
+    stateRoot,
+    block,
+    token,
+    voter,
+  }
+  const args = [
+    '--mnemonic-index=0',
+    `--mnemonic-passphrase='${process.env.PRIVATE_KEY}'`,
+    `--chain-id=${chainId}`,
+    `--input=${JSON.stringify(payload)}`,
+  ]
+  await exec('sunodo send generic', args, {cwd: cwd})
 }
 
 async function castVote(chainId, proposalId, voter, support, weight, proof) {
