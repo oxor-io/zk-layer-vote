@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useRef, useState } from "react";
 import { IProposal } from "hooks/useGovernorL1";
 import { AppTableRow } from "components/AppComponents/AppTable";
 import { StyledTableCell } from "components/Voting/VotingTable";
@@ -36,6 +36,8 @@ export enum ProposalState {
   Executed,
 }
 
+const L1_NETWORK = process.env.REACT_APP_L1_NETWORK;
+
 const VotingTableItem: FC<VotingTableItemProps> = ({
   proposal,
   index,
@@ -49,22 +51,26 @@ const VotingTableItem: FC<VotingTableItemProps> = ({
   const [showNetworkCheck, setShowNetworkCheck] = useState<boolean>(false);
   const { open, close } = useWeb3Modal();
   const { open: openedModal } = useWeb3ModalState();
+  const prevOpenedModel = useRef<boolean>(false);
   const chainId = useChainId();
 
   useEffect(() => {
     if (showNetworkCheck) {
       if (
+        prevOpenedModel.current &&
         !openedModal &&
-        chainId.toString() === process.env.REACT_APP_L1_NETWORK
+        chainId.toString() === L1_NETWORK
       ) {
+        return setShowNetworkCheck(false);
+      } else if (!openedModal && chainId.toString() === L1_NETWORK) {
         open({ view: "Networks" });
-        setShowNetworkCheck(false);
-      } else if (chainId.toString() !== process.env.REACT_APP_L1_NETWORK) {
+      } else if (chainId.toString() !== L1_NETWORK) {
         close();
         setShowVotingModal(true);
         setShowNetworkCheck(false);
       }
     }
+    prevOpenedModel.current = openedModal;
   }, [
     openedModal,
     chainId,
