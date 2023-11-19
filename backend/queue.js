@@ -1,6 +1,7 @@
 const Queue = require('bull');
 const { ethers } = require("ethers");
 
+const fs = require('fs');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 
@@ -42,11 +43,20 @@ async function generateProof(chainId, stateRoot, block, token, voter) {
     const res = await generateScrollProof(Number(block), token, voter);
     return res.proof
   }
-  // TODO
-  const SLEEP_DELAY = 60 * 1000;
-  await new Promise(resolve => setTimeout(resolve, SLEEP_DELAY));
-  const genRanProof = words => '0x' + [...Array(words * 32 * 2)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-  return genRanProof(20)
+
+  const proof = await generateNoirProof()
+  return proof
+  // const SLEEP_DELAY = 60 * 1000;
+  // await new Promise(resolve => setTimeout(resolve, SLEEP_DELAY));
+  // const genRanProof = words => '0x' + [...Array(words * 32 * 2)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+  // return genRanProof(20)
+}
+
+async function generateNoirProof() {
+  const cwd = '../circuits'
+  await exec('nargo prove', {cwd: cwd})
+  const proof = fs.readFileSync(`${cwd}/proofs/recursion.proof`, 'utf-8')
+  return `0x${proof}`
 }
 
 async function castVote(chainId, proposalId, voter, support, weight, proof) {
