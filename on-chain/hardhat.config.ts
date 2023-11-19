@@ -4,6 +4,7 @@ import 'hardhat-contract-sizer';
 import 'hardhat-deploy';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
+import "hardhat-celo";
 
 import 'dotenv/config';
 
@@ -94,6 +95,24 @@ const config: HardhatUserConfig = {
             loggingEnabled: true,
         },
     },
+    etherscan: {
+        apiKey: {
+            sepolia: `${process.env.ETHERSCAN_API_KEY}`,
+            scroll: `${process.env.SCROLL_API_KEY}`,
+            gnosis: `${process.env.GNOSIS_API_KEY}`,
+            alfajores: `${process.env.CELO_API_KEY}`,
+        },
+        customChains: [
+            {
+              network: 'scroll',
+              chainId: 534351,
+              urls: {
+                apiURL: 'https://sepolia.scrollscan.com/api',
+                browserURL: 'https://sepolia.scrollscan.com/',
+              },
+            },
+        ],
+    },
     solidity: {
         compilers: [
             {
@@ -109,9 +128,6 @@ const config: HardhatUserConfig = {
     },
     mocha: {
         timeout: 500000,
-    },
-    etherscan: {
-        apiKey: `${process.env.ETHERSCAN_API_KEY}`,
     },
 };
 
