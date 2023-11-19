@@ -11,6 +11,8 @@ import {IScrollVerifier, IScrollChain} from "./interfaces/IScroll.sol";
 import {IStateRootStorage} from "./interfaces/IStateRootStorage.sol";
 import {GovernorL1Errors} from "./interfaces/GovernorL1Errors.sol";
 
+import {UltraVerifier} from "./verifier/plonk_vk.sol";
+
 contract GovernorL1 is
     GovernorL1Errors,
     Governor,
@@ -72,6 +74,9 @@ contract GovernorL1 is
         chainIds = proverChainIds;
     }
 
+    // ============================
+    // ===== PUBLIC FUNCTIONS =====
+    // ============================
     function castVoteCC(
         uint256 proposalId,
         address voter,
@@ -85,7 +90,7 @@ contract GovernorL1 is
         }
         l2VoteCounter[proposalId][chainId][voter] = true;
 
-        checkProof(chainId, proposalId, voter, weight, proof);
+        verifyProof(chainId, proposalId, voter, weight, proof);
         _countVote(proposalId, voter, support, weight, _defaultParams());
 
         emit VoteCast(voter, proposalId, support, weight, "");
@@ -113,7 +118,33 @@ contract GovernorL1 is
         return proposalId;
     }
 
-    function checkProof(uint256 chainId, uint256 proposalId, address voter, uint256 weight, bytes calldata proof)
+    // The following functions are overrides required by Solidity.
+    function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
+        return super.votingDelay();
+    }
+
+    function votingPeriod() public view override(Governor, GovernorSettings) returns (uint256) {
+        return super.votingPeriod();
+    }
+
+    function quorum(uint256 blockNumber)
+        public
+        view
+        override(Governor, GovernorVotesQuorumFraction)
+        returns (uint256)
+    {
+        return super.quorum(blockNumber);
+    }
+
+    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
+        return super.proposalThreshold();
+    }
+
+    // ============================
+    //  ==== PRIVATE FUNCTIONS ====
+    // ============================
+
+    function verifyProof(uint256 chainId, uint256 proposalId, address voter, uint256 weight, bytes calldata proof)
         private
         view
     {
@@ -138,36 +169,19 @@ contract GovernorL1 is
             if (rootFromScroll != stateRootFromUser) {
                 revert GovernorL1__rootsAreDiffer();
             }
-        } else { // other chains
-                // require(
-                // verifiers[0].verifyProof(
-                //     proof,
-                //     [uint256(root), uint256(uint160(voter)), uint256(uint160(l2TokenAddress)), weight]
-                // ),
-                // "Invalid proof"
-                // );
+        } else {
+            UltraVerifier verifier = UltraVerifier(verifiers[chainId]);
+
+            bytes32[] memory publicInputs = new bytes32[](4);
+
+            publicInputs[0] = proposalStateRoots[proposalId][chainId].root;
+            publicInputs[1] = bytes32(proposalId);
+            publicInputs[2] = bytes32(uint256(uint160(voter)));
+            publicInputs[3] = bytes32(weight);
+
+            if (!verifier.verify(proof, publicInputs)) {
+                revert GovernorL1__incorrectProof();
+            }
         }
-    }
-
-    // The following functions are overrides required by Solidity.
-    function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
-        return super.votingDelay();
-    }
-
-    function votingPeriod() public view override(Governor, GovernorSettings) returns (uint256) {
-        return super.votingPeriod();
-    }
-
-    function quorum(uint256 blockNumber)
-        public
-        view
-        override(Governor, GovernorVotesQuorumFraction)
-        returns (uint256)
-    {
-        return super.quorum(blockNumber);
-    }
-
-    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
-        return super.proposalThreshold();
     }
 }
