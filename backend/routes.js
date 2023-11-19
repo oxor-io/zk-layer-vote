@@ -14,9 +14,7 @@ router.get('/jobs', async function(req, res, next) {
     return
   }
 
-  let completedJobs = await proofsQueue.getJobs();
-  let failedJobs = await proofsQueue.getFailed();
-  let jobs = [...completedJobs, ...failedJobs]
+  let jobs = await proofsQueue.getJobs()
     .sort((a, b) => parseInt(b.id) - parseInt(a.id))
     .filter(i => i.data.voter == voter && i.data.chainId == chainId)
     // .map(i => {
