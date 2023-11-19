@@ -79,7 +79,7 @@ const VotingModal: FC<VotingTransactionPropsType> = ({
   const { control, handleSubmit } = useForm({
     defaultValues: {
       weight: "",
-      support: "1",
+      support: "",
     },
   });
   const account = useAccount();

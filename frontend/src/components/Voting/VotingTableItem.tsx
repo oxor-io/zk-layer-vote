@@ -51,13 +51,6 @@ const VotingTableItem: FC<VotingTableItemProps> = ({
   const { open: openedModal } = useWeb3ModalState();
   const chainId = useChainId();
 
-  console.log({
-    proposalStatesRoot,
-    proposalState,
-    proposalVote,
-    proposalVoted,
-  });
-
   useEffect(() => {
     if (showNetworkCheck) {
       if (
