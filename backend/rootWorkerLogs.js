@@ -3,8 +3,8 @@ const {
   generateTree,
   proofElementInTree,
   indexOfTree,
-  selializeTree,
-  deselializeTree,
+  serializeTree,
+  deserializeTree,
 } = require("./generateMerkleTree");
 const { createClient } = require('redis');
 const ABI_ERC20 = require("./abi/Erc20.json");
@@ -46,7 +46,6 @@ async function getLogs(fromBlock, toBlock, tokenAddress) {
       "address": tokenAddress,
       "topics": [
         "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-        // "0x0000000000000000000000000000000000000000000000000000000000000000",
       ]
     }
   )
@@ -93,7 +92,7 @@ async function getTreeLeafs(storedBalances) {
 }
 
 async function storeTree(tree, chainId, blockNumber) {
-  const treeStr = await selializeTree(tree)
+  const treeStr = await serializeTree(tree)
 
   await client.hSet(`chainId-${chainId}-trees`, blockNumber.toString(), treeStr)
   console.log("Tree root: ", tree.root)
@@ -101,14 +100,12 @@ async function storeTree(tree, chainId, blockNumber) {
 
 async function fetchTree(chainId, blockNumber) {
   const treeStr = await client.hGet(`chainId-${chainId}-trees`, blockNumber.toString())
-  return deselializeTree(treeStr)
+  return deserializeTree(treeStr)
 }
 
 async function checkTree(tree, leafsData) {
     console.log("Check leaf: ", leafsData[0])
     await proofElementInTree(tree, leafsData[0])
-    // console.log("Proof2: ", await proofElementInTree(tree, ['0x22f6cc8738308a8c92a6a71ea67832463d1fec0d', 71983490000 ]))
-    // console.log("Proof wrong: ", await proofElementInTree(tree, ['0x22f6cc8738308a8c92a6a71ea67832463d1fec0d', 123 ]))
     console.log("Leaf is ok")
 }
 

@@ -33,7 +33,7 @@ async function indexOfTree(tree, val) {
   return tree.indexOf(poseidon.F.toObject(res))
 }
 
-async function selializeTree(tree) {
+async function serializeTree(tree) {
   return JSON.stringify(tree.serialize(), (key, value) =>
     typeof value === 'bigint'
         ? value.toString()
@@ -41,8 +41,7 @@ async function selializeTree(tree) {
   )
 }
 
-async function deselializeTree(treeStr) {
-  // @todo deserialize bigInt
+async function deserializeTree(treeStr) {
   return MerkleTree.deserialize(JSON.parse(treeStr))
 }
 
@@ -50,6 +49,6 @@ module.exports = {
   generateTree,
   proofElementInTree,
   indexOfTree,
-  selializeTree,
-  deselializeTree,
+  serializeTree,
+  deserializeTree,
 };
