@@ -22,6 +22,10 @@
 
 # Deployments
 
+## Twitter
+
+- [Gnosis Twitter Announce](https://twitter.com/Hilaymanai/status/1726068600484598095)
+
 ## Contract addresses
 
 ### Sepolia
@@ -34,8 +38,8 @@
 - DelegateL2 - [0x4d389dA3786036ee0b9aba8E4B99891a925d88D0](https://sepolia-blockscout.scroll.io/address/0x4d389dA3786036ee0b9aba8E4B99891a925d88D0)
 
 ### XDC-testnet
-- TokenL2 - 0xbb8c8E79c34C6420716A6937bF7E3B9226Cc81f5
-- DelegateL2 - 0x491A7D1A203980Fd5d2cdE093893FcdCf994291e
+- TokenL2 - [0xbb8c8E79c34C6420716A6937bF7E3B9226Cc81f5](https://explorer.apothem.network/address/0xbb8c8E79c34C6420716A6937bF7E3B9226Cc81f5#transactions)
+- DelegateL2 - [0x491A7D1A203980Fd5d2cdE093893FcdCf994291e](https://explorer.apothem.network/address/0x491A7D1A203980Fd5d2cdE093893FcdCf994291e#internalTransactions)
 
 ### Arbitrum-sepolia
 - TokenL2 - [0xC007267DF5f0f7aEc5fb90CF03b56F051Bc6C89e](https://sepolia.arbiscan.io/address/0xc007267df5f0f7aec5fb90cf03b56f051bc6c89e)
