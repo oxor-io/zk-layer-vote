@@ -28,15 +28,15 @@ contract GovernorL1 is
     uint256 private constant SCROLL_SEPOLIA_CHAIN_ID = 534351;
     address private constant SCROLL_CHAIN_ROLLUP_ADDRESS = 0xa13BAF47339d63B743e7Da8741db5456DAc1E556;
 
-    IStateRootStorage public immutable STATE_ROOT_STORAGE;
+    IStateRootStorage public immutable STATE_ROOT_STORAGE; // Like an oracle
 
     // ============================
     // ===== STATE VARIABLES =====
     // ============================
-    uint256[] public chainIds;
+    uint256[] public chainIds; // Supported chains
     mapping(uint256 chainId => address verifier) public verifiers;
     mapping(uint256 proposalId => uint256 batchIndex) public proposalIdToScrollBatchIndex;
-    mapping(uint256 => mapping(uint256 => IStateRootStorage.ProposalStateRoot)) public proposalStateRoots;
+    mapping(uint256 proposalId => mapping(uint256 chainId => bytes32 stateRoot)) public stateRootOnTimeOfProposal;
 
     mapping(uint256 proposalId => mapping(uint256 chainId => mapping(address voter => bool))) public l2VoteCounter;
 
@@ -101,17 +101,25 @@ contract GovernorL1 is
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
-        string memory description
-    ) public override returns (uint256) {
+        string memory description,
+        uint256 blockNumber
+    ) public returns (uint256) {
         uint256 proposalId = super.propose(targets, values, calldatas, description);
 
-        // save L2 state roots in proposal init block
-        for (uint256 i = 0; i < chainIds.length; i++) {
-            if (chainIds[i] == SCROLL_SEPOLIA_CHAIN_ID) {
-                proposalIdToScrollBatchIndex[proposalId] =
-                    IScrollChain(SCROLL_CHAIN_ROLLUP_ADDRESS).lastFinalizedBatchIndex();
-            } else {
-                proposalStateRoots[proposalId][chainIds[i]] = STATE_ROOT_STORAGE.stateRoots(chainIds[i]);
+        // if blockNumber is type(uint256).max) it is means that proposal
+        if (blockNumber != type(uint256).max) {
+            // save L2 state roots in proposal init block
+            for (uint256 i = 0; i < chainIds.length; i++) {
+                if (chainIds[i] == SCROLL_SEPOLIA_CHAIN_ID) {
+                    proposalIdToScrollBatchIndex[proposalId] =
+                        IScrollChain(SCROLL_CHAIN_ROLLUP_ADDRESS).lastFinalizedBatchIndex();
+                } else {
+                    bytes32 root = STATE_ROOT_STORAGE.stateRoots(chainIds[i], blockNumber);
+                    if (root == 0) {
+                        revert GovernorL1__stateRootIsZero();
+                    }
+                    stateRootOnTimeOfProposal[proposalId][chainIds[i]] = root;
+                }
             }
         }
 
@@ -148,6 +156,9 @@ contract GovernorL1 is
         private
         view
     {
+        //   chainId == scroll -> verifyZkTrieProof
+        // {
+        //   otherwise verify via aztec plonk prover
         if (chainId == SCROLL_SEPOLIA_CHAIN_ID) {
             uint256 scrollBatchIndex = proposalIdToScrollBatchIndex[proposalId];
             if (scrollBatchIndex == 0) {
@@ -174,7 +185,7 @@ contract GovernorL1 is
 
             bytes32[] memory publicInputs = new bytes32[](4);
 
-            publicInputs[0] = proposalStateRoots[proposalId][chainId].root;
+            publicInputs[0] = stateRootOnTimeOfProposal[proposalId][chainId];
             publicInputs[1] = bytes32(proposalId);
             publicInputs[2] = bytes32(uint256(uint160(voter)));
             publicInputs[3] = bytes32(weight);
@@ -183,5 +194,15 @@ contract GovernorL1 is
                 revert GovernorL1__incorrectProof();
             }
         }
+    }
+
+    // We need to get blockNumber, but it is impossible to add params to this function, because it comes from parent contract
+    function propose(
+        address[] memory, /* targets */
+        uint256[] memory, /* values */
+        bytes[] memory, /* calldatas */
+        string memory /* description */
+    ) public override returns (uint256) {
+        revert();
     }
 }

@@ -1,27 +1,30 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-contract StateRootL1 {
+import {Ownable} from "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 
-    struct StateRoot {
-        bytes32 root;
-        uint256 l2BlockNumber;
-    }
+interface IStateRootL1 {
+    error StateRootL1__sameChainid();
+    error StateRootL1__emptyRoot();
 
-    mapping(uint256 => StateRoot) public stateRoots;
+    event RootUpdated(uint256 indexed chainId, bytes32 root);
+}
 
-    event RootAdded(
-        uint256 chainId,
-        bytes32 root
-    );
+contract StateRootL1 is IStateRootL1, Ownable {
+    constructor(address oracle) Ownable(oracle) {}
 
-    function addStateRoot(
-        uint256 chainId,
-        bytes32 stateRoot,
-        uint256 blockNumber
-    ) public {
-        stateRoots[chainId] = StateRoot(stateRoot, blockNumber);
+    mapping(uint256 chainId => mapping(uint256 blockNumber => bytes32 stateRoot)) public stateRoots;
 
-        emit RootAdded(chainId, stateRoot);
+    function addStateRoot(uint256 chainId, bytes32 stateRoot, uint256 blockNumber) public onlyOwner {
+        if (chainId == block.chainid) {
+            revert StateRootL1__sameChainid();
+        }
+
+        if (stateRoot == 0) {
+            revert StateRootL1__emptyRoot();
+        }
+
+        stateRoots[chainId][blockNumber] = stateRoot;
+        emit RootUpdated(chainId, stateRoot);
     }
 }
