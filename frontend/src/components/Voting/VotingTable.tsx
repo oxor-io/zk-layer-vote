@@ -18,7 +18,7 @@ import { AppTableHeaderRow } from "components/AppComponents/AppTable";
 import VotingTableItem from "components/Voting/VotingTableItem";
 import useGovernorL1 from "hooks/useGovernorL1";
 import useVotesToken from "../../hooks/useVotesToken";
-import { useAccount } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 
 export const TablePaper = styled(Paper)`
   background: transparent;
@@ -44,6 +44,7 @@ export const StyledTableCell = styled(TableCell)(({ theme }) => ({
 
 const VotingTable = () => {
   const account = useAccount();
+  const chainId = useChainId();
   const {
     proposals,
     createProposal,
@@ -76,16 +77,18 @@ const VotingTable = () => {
             paddingBottom: "20px",
           }}
         >
-          <ButtonPrimary
-            isLoading={createProposalLoading}
-            onClick={createProposal}
-          >
-            {createProposalLoading ? (
-              <CircularProgress size={30} />
-            ) : (
-              "Create Proposal"
-            )}
-          </ButtonPrimary>
+          {chainId.toString() === process.env.REACT_APP_L1_NETWORK && (
+            <ButtonPrimary
+              isLoading={createProposalLoading}
+              onClick={createProposal}
+            >
+              {createProposalLoading ? (
+                <CircularProgress size={30} />
+              ) : (
+                "Create Proposal"
+              )}
+            </ButtonPrimary>
+          )}
         </Box>
         <TableContainer component={TablePaper}>
           <Table sx={{ minWidth: 650 }} aria-label="simple table">
