@@ -3,7 +3,7 @@
 This repo contains source files of a cross-chain voting protocol for ETHGlobal Istanbul 2023.
 
 ## Frontend
-https://6559ab72551d447a5fb7c9aa--zk-layer-vote.netlify.app
+https://6559b054b025a87e3173ea8c--zk-layer-vote.netlify.app
 
 [![](https://img.youtube.com/vi/N18IXQyNN14/0.jpg)](https://www.youtube.com/watch?v=N18IXQyNN14 "zkvote demo")
 
