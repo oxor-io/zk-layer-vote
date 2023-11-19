@@ -1,106 +1,95 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import '@openzeppelin/contracts/governance/Governor.sol';
-import '@openzeppelin/contracts/governance/extensions/GovernorSettings.sol';
-import '@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol';
-import '@openzeppelin/contracts/governance/extensions/GovernorVotes.sol';
-import '@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol';
+import "@openzeppelin/contracts/governance/Governor.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
 
-struct ProposalStateRoot {
-    bytes32 root;
-    uint256 l2BlockNumber;
-}
-
-interface IVerifier {
-    function verifyProof(bytes memory _proof, uint256[4] memory _input) external returns (bool);
-}
-
-interface IStateRootStorage {
-    struct ProposalStateRoot {
-        bytes32 root;
-        uint256 l2BlockNumber;
-    }
-    function stateRoots(uint256 chainId) external returns (ProposalStateRoot memory );
-}
+import {IScrollVerifier, IScrollChain} from "./interfaces/IScroll.sol";
+import {IStateRootStorage} from "./interfaces/IStateRootStorage.sol";
+import {GovernorL1Errors} from "./interfaces/GovernorL1Errors.sol";
 
 contract GovernorL1 is
+    GovernorL1Errors,
     Governor,
     GovernorSettings,
     GovernorCountingSimple,
     GovernorVotes,
     GovernorVotesQuorumFraction
 {
-    IStateRootStorage public stateRootStorage;
-    mapping(uint256 => mapping(uint256 => mapping(address => bool))) public l2VoteCounter;
-    mapping(uint256 => mapping(uint256 => ProposalStateRoot)) public proposalStateRoots;
-    mapping(uint256 => IVerifier) public verifiers;
+    // ============================
+    // ===CONSTANTS & IMMUTABLES===
+    // ============================
+    uint256 private constant BALANCE_STORAGE_SLOT = 0;
+    uint256 private constant SCROLL_SEPOLIA_CHAIN_ID = 534351;
+    address private constant SCROLL_CHAIN_ROLLUP_ADDRESS = 0xa13BAF47339d63B743e7Da8741db5456DAc1E556;
 
-    uint256[8] public chainIds = [
-        51,
-        534351,
-        421614,
-        100,
-        84531,
-        44787,
-        1442,
-        59140
-    ];
+    IStateRootStorage public immutable STATE_ROOT_STORAGE;
+
+    // ============================
+    // ===== STATE VARIABLES =====
+    // ============================
+    uint256[] public chainIds;
+    mapping(uint256 chainId => address verifier) public verifiers;
+    mapping(uint256 proposalId => uint256 batchIndex) public proposalIdToScrollBatchIndex;
+    mapping(uint256 => mapping(uint256 => IStateRootStorage.ProposalStateRoot)) public proposalStateRoots;
+
+    mapping(uint256 proposalId => mapping(uint256 chainId => mapping(address voter => bool))) public l2VoteCounter;
 
     constructor(
         IVotes _token,
-        IVerifier scrollVerifier,
-        IVerifier verifier,
-        IStateRootStorage rootStarage
+        uint256[] memory proverChainIds,
+        address[] memory proofVerifiers,
+        IStateRootStorage rootStorage
     )
-        Governor('Governor')
-        GovernorSettings(0, 50400 /* 1 week */, 0)
+        Governor("Governor")
+        GovernorSettings(0, 50400, /* 1 week */ 0)
         GovernorVotes(_token)
         GovernorVotesQuorumFraction(4)
-    {   
-        stateRootStorage = rootStarage;
-        verifiers[0] = verifier;
-        verifiers[534351] = scrollVerifier;
+    {
+        uint256 verifierLength = proofVerifiers.length;
+
+        if (chainIds.length != verifierLength) {
+            revert GovernorL1__lengthMismatched();
+        }
+
+        if (address(rootStorage) == address(0)) {
+            revert GovernorL1__zeroAddress();
+        }
+
+        STATE_ROOT_STORAGE = rootStorage;
+
+        for (uint256 i = 0; i < verifierLength; i++) {
+            if (proofVerifiers[i] == address(0)) {
+                revert GovernorL1__zeroAddress();
+            }
+
+            verifiers[proverChainIds[i]] = proofVerifiers[i];
+        }
+
+        chainIds = proverChainIds;
     }
 
     function castVoteCC(
-        uint256 proposalId, 
-        address voter, 
+        uint256 proposalId,
+        address voter,
         uint8 support,
-        uint256 weight, 
-        uint256 chainId, 
-        bytes calldata proof) public returns (uint256) {
-        checkProof(chainId, proposalStateRoots[proposalId][chainId].root, proof, voter, weight);
-
-        require(l2VoteCounter[proposalId][chainId][voter] == false);
+        uint256 weight,
+        uint256 chainId,
+        bytes calldata proof
+    ) public returns (uint256) {
+        if (l2VoteCounter[proposalId][chainId][voter]) {
+            revert GovernorL1__alreadyVoted();
+        }
         l2VoteCounter[proposalId][chainId][voter] = true;
 
+        checkProof(chainId, proposalId, voter, weight, proof);
         _countVote(proposalId, voter, support, weight, _defaultParams());
 
         emit VoteCast(voter, proposalId, support, weight, "");
-
         return weight;
-    }
-
-    function checkProof(
-        uint256 chainId,
-        bytes32 root,
-        bytes calldata proof,
-        address voter,
-        uint256 weight
-    ) internal {
-        if (chainId == 534351) { // scroll sepolia
-            // TODO check proof
-            // add l2TokenAddress
-        } else { // other chains
-            // require(
-            // verifiers[0].verifyProof(
-            //     proof,
-            //     [uint256(root), uint256(uint160(voter)), uint256(uint160(l2TokenAddress)), weight]
-            // ),
-            // "Invalid proof"
-            // );
-        }
     }
 
     function propose(
@@ -109,18 +98,58 @@ contract GovernorL1 is
         bytes[] memory calldatas,
         string memory description
     ) public override returns (uint256) {
-        // save L2 state roots in proposal init block
         uint256 proposalId = super.propose(targets, values, calldatas, description);
+
+        // save L2 state roots in proposal init block
         for (uint256 i = 0; i < chainIds.length; i++) {
-            proposalStateRoots[proposalId][chainIds[i]].root = stateRootStorage.stateRoots(chainIds[i]).root;
-            proposalStateRoots[proposalId][chainIds[i]].l2BlockNumber = stateRootStorage.stateRoots(chainIds[i]).l2BlockNumber;
+            if (chainIds[i] == SCROLL_SEPOLIA_CHAIN_ID) {
+                proposalIdToScrollBatchIndex[proposalId] =
+                    IScrollChain(SCROLL_CHAIN_ROLLUP_ADDRESS).lastFinalizedBatchIndex();
+            } else {
+                proposalStateRoots[proposalId][chainIds[i]] = STATE_ROOT_STORAGE.stateRoots(chainIds[i]);
+            }
         }
-        // TODO scroll chain root
+
         return proposalId;
     }
 
-    // The following functions are overrides required by Solidity.
+    function checkProof(uint256 chainId, uint256 proposalId, address voter, uint256 weight, bytes calldata proof)
+        private
+        view
+    {
+        if (chainId == SCROLL_SEPOLIA_CHAIN_ID) {
+            uint256 scrollBatchIndex = proposalIdToScrollBatchIndex[proposalId];
+            if (scrollBatchIndex == 0) {
+                revert GovernorL1__incorrectProposalId();
+            }
 
+            bytes32 storageKey = keccak256(abi.encode(voter, BALANCE_STORAGE_SLOT));
+
+            IScrollVerifier verifier = IScrollVerifier(verifiers[SCROLL_SEPOLIA_CHAIN_ID]);
+            (bytes32 stateRootFromUser, bytes32 storageValue) =
+                verifier.verifyZkTrieProof(address(token()), storageKey, proof);
+
+            if (weight != uint256(storageValue)) {
+                revert GovernorL1__weightMismatch(weight, uint256(storageValue));
+            }
+
+            bytes32 rootFromScroll = IScrollChain(SCROLL_CHAIN_ROLLUP_ADDRESS).finalizedStateRoots(scrollBatchIndex);
+
+            if (rootFromScroll != stateRootFromUser) {
+                revert GovernorL1__rootsAreDiffer();
+            }
+        } else { // other chains
+                // require(
+                // verifiers[0].verifyProof(
+                //     proof,
+                //     [uint256(root), uint256(uint160(voter)), uint256(uint160(l2TokenAddress)), weight]
+                // ),
+                // "Invalid proof"
+                // );
+        }
+    }
+
+    // The following functions are overrides required by Solidity.
     function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
         return super.votingDelay();
     }
@@ -129,18 +158,16 @@ contract GovernorL1 is
         return super.votingPeriod();
     }
 
-    function quorum(
-        uint256 blockNumber
-    ) public view override(Governor, GovernorVotesQuorumFraction) returns (uint256) {
+    function quorum(uint256 blockNumber)
+        public
+        view
+        override(Governor, GovernorVotesQuorumFraction)
+        returns (uint256)
+    {
         return super.quorum(blockNumber);
     }
 
-    function proposalThreshold()
-        public
-        view
-        override(Governor, GovernorSettings)
-        returns (uint256)
-    {
+    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
         return super.proposalThreshold();
     }
 }
