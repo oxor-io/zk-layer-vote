@@ -1,11 +1,39 @@
-# zk-layer-vote
+# zkVote.cc
 
 This repo contains source files of a cross-chain voting protocol for ETHGlobal Istanbul 2023.
 
-## Frontend
-https://6559b054b025a87e3173ea8c--zk-layer-vote.netlify.app
-
 [![](https://img.youtube.com/vi/N18IXQyNN14/0.jpg)](https://www.youtube.com/watch?v=N18IXQyNN14 "zkvote demo")
+
+# Introduction
+
+## Problem
+
+Many blockchain projects have governance tokens (such as UNI). Typically, the voting token and DAO smart contracts are deployed on the main Ethereum network. However, a significant portion of the governance tokens are transferred to L2 networks using bridges, stripping them of their governance functionality. Thus, to participate in DAO governance, tokens must be transferred back to the main Ethereum network, which is expensive, inconvenient, and not always fast.
+
+## Examples
+
+There are numerous governance tokens initially deployed and used for governance on Ethereum L1, which have been partly bridged to various L2 networks. For example:
+- Curve | CRV token - no less than 2.5% of the circulating supply is bridged to various L2s (based on Coingecko data - sum of bridged tokens' totalSupply).
+- Lido V2 | LDO token - no less than 0.37% of the circulating supply is bridged to various L2s.
+- Uniswap V3 | UNI token - no less than 0.23% of the circulating supply is bridged to various L2s.
+
+Currently, the percentage of the circulating supply that is bridged to various L2s is not large. However, it will definitely increase with the growing popularity of L2 solutions and the emergence of the ability to vote with tokens located on L2s.
+
+## Solution
+
+Since the architecture of L2 networks involves storing the state root on the main network, this state root can be used for storage proofs of governance token balances in the L2 network:
+- A user wishing to vote using tokens on an L2 network visits the project's frontend: enters their voting decision (for/against, amount of tokens) and signs it with their private key. The project's backend generates a storage proof that a user with such a balance in L2 votes this way in the election.
+- The project's backend aggregates all votes/proofs into a single recursive SNARKs proof and sends it to the L1 voting contract.
+
+## Architecture
+
+![ArchitectureScheme](Final.png)
+
+Let's consider the architecture and operation of the project step by step:
+1. When creating a proposal for voting on the main Ethereum network, the snapshot block numbers in each supported L2 are recorded. The governance token balances in each L2 network at the corresponding block can be used for this election.
+2. A user wishing to vote using tokens on an L2 network visits the project's frontend: enters their voting decision (for/against, amount of tokens) and signs it with their private key. The project's backend checks the user's balance in the L2 network and generates a storage proof (zk proof) that a user with such a balance in L2 votes this way in the election.
+3. The project's backend accumulates user votes in the form of zk proofs. At the end of the voting period, the project's backend aggregates all votes/proofs into a single recursive SNARKs proof and sends it to the L1 voting contract.
+4. The main voting contract checks and aggregates proofs from all networks, distributes corresponding votes among the voting options.
 
 ## Installation
 
@@ -30,11 +58,8 @@ https://6559b054b025a87e3173ea8c--zk-layer-vote.netlify.app
 
 ## Deployments
 
-### Twitter
-
-- [Gnosis Twitter Announce](https://twitter.com/Hilaymanai/status/1726068600484598095)
-
-## Contract addresses
+### Frontend demo
+https://6559b054b025a87e3173ea8c--zk-layer-vote.netlify.app
 
 ### Sepolia
 - VotesTokenL1 - [0x4d389dA3786036ee0b9aba8E4B99891a925d88D0](https://sepolia.etherscan.io/address/0x4d389dA3786036ee0b9aba8E4B99891a925d88D0)
@@ -73,60 +98,10 @@ https://6559b054b025a87e3173ea8c--zk-layer-vote.netlify.app
 - TokenL2 - [0xC007267DF5f0f7aEc5fb90CF03b56F051Bc6C89e](https://goerli.lineascan.build/address/0xc007267df5f0f7aec5fb90cf03b56f051bc6c89e)
 - DelegateL2 - [0x4d389dA3786036ee0b9aba8E4B99891a925d88D0](https://goerli.lineascan.build/address/0x4d389da3786036ee0b9aba8e4b99891a925d88d0)
 
-# Introduction
-
-## Problem
-
-- For voting in DAO protocols, voting tokens (VTs) are required.
-
-- What happens if VTs are scattered across multiple networks simultaneously?
-
-- **Two problems arise:**
-    1. The complexity of **synchronizing** voting results from multiple networks concurrently.
-    2. The inability to deploy VTs in other networks due to **bridge architecture limitations** (converting VTs into ERC20 tokens).
-
-## Examples
-
-- Uniswap V3 | `UNI` token | OpenZeppelin Governor + Snapshot
-- Lido V2 | `LDO` token | Aragon
-- Curve | `CRV` token | Aragon
-- ENS | `ENS` token | Snapshot + Tally
-- Balancer | `BAL` token | Snapshot
-- … and any other protocols with a VTs in L1 that lack implementations in L2.
-
-## Solution
-
-**A crosschain governance protocol that:**
-
-1. Uses a **trustless & universal** architecture supporting multiple L2 networks, with VT on L1.
-
-2. Uses **default ERC-20** to eliminate conflicts in the bridge architecture.
-
-3. Shifts the execution of L2-voting mechanisms to the **ZKP-module**, instead of using VT.
-
-4. Implements ZKP to validate the accurate delivery of **L2 State data**.
-
-## Architecture
-
-![ArchitectureScheme](Final.png)
-
-**Step 1.** VT → Bridge → ERC-20
-
-**Step 2.** We use standard ERC-20 (or delegate storage), aggregate information about balances recorded in the snapshot, and send it to the Frontend for further use.
-
-**Step 3.** Through the Frontend, the Proof Generator receives information about `ChainId`, `Voter Address`, and `Vote`; based on these values, the Proving System generates a SNARK proof and commits it to the votes aggregator on L1.
-
-**Step 4.** The main Voting Contract accounts for votes from all networks, incorporates them into the quorum, and distributes them across the proposal options. Voting is finished.
-
-# Demonstration
-
-
-
-
-# Future track
+## Future track
+Our end goal is to develop an open-source cross-chain governance module that operates on recursive SNARKs and can be integrated with existing governance frameworks like Tally, Snapshot, and others.
 
 1. Improving SNARK proofs aggregation.
-
 2. Implementing custom plugins for voting mechanisms:
     - OpenZeppelin Governor | Ethereum | [link](https://docs.openzeppelin.com/contracts/4.x/api/governance)
     - Aragon | Ethereum | [link](https://aragon.org/)
